@@ -1,0 +1,107 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Kit Pack the Job</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+  <style>
+    body { margin: 0; background: #222; }
+    canvas { display: block; margin: 0 auto; }
+  </style>
+</head>
+<body>
+
+<script>
+const config = {
+    type: Phaser.AUTO,
+    width: 1152,
+    height: 768,
+    backgroundColor: '#333333',
+    physics: {
+        default: 'arcade',
+        arcade: { debug: false }
+    },
+    scene: {
+        preload,
+        create,
+        update
+    }
+};
+
+const game = new Phaser.Game(config);
+
+let player, cursors, items = [], carrying = [], dropZones = [], score = 0, scoreText, timer = 60, timerText;
+
+function preload() {
+    this.load.image('background', 'background.png');
+    this.load.image('player', 'pressman_idle.png');
+    this.load.image('item1', 'press_sheet.png');
+    this.load.image('box', 'kit_box.png');
+}
+
+function create() {
+    this.add.image(576, 384, 'background');
+
+    player = this.physics.add.sprite(576, 650, 'player');
+    player.setCollideWorldBounds(true);
+
+    cursors = this.input.keyboard.createCursorKeys();
+
+    items.push(this.physics.add.sprite(200, 200, 'item1').setData('type', 'A'));
+    items.push(this.physics.add.sprite(300, 200, 'item1').setData('type', 'A'));
+    items.push(this.physics.add.sprite(400, 200, 'item1').setData('type', 'A'));
+
+    dropZones.push(this.physics.add.sprite(250, 550, 'box').setData('type', 'A'));
+    dropZones.push(this.physics.add.sprite(576, 550, 'box').setData('type', 'A'));
+    dropZones.push(this.physics.add.sprite(900, 550, 'box').setData('type', 'A'));
+
+    scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '18px', fill: '#fff' });
+    timerText = this.add.text(1000, 16, 'Time: 60', { fontSize: '18px', fill: '#fff' });
+
+    this.time.addEvent({
+        delay: 1000,
+        callback: () => {
+            timer--;
+            timerText.setText('Time: ' + timer);
+            if (timer <= 0) {
+                this.scene.pause();
+                this.add.text(460, 360, 'Time's up!', { fontSize: '32px', fill: '#ff0' });
+            }
+        },
+        loop: true
+    });
+}
+
+function update() {
+    player.setVelocity(0);
+    if (cursors.left.isDown) player.setVelocityX(-160);
+    if (cursors.right.isDown) player.setVelocityX(160);
+    if (cursors.up.isDown) player.setVelocityY(-160);
+    if (cursors.down.isDown) player.setVelocityY(160);
+
+    // Check for item pickup
+    for (let i = items.length - 1; i >= 0; i--) {
+        let item = items[i];
+        if (Phaser.Geom.Intersects.RectangleToRectangle(player.getBounds(), item.getBounds())) {
+            carrying.push(item.getData('type'));
+            item.destroy();
+            items.splice(i, 1);
+        }
+    }
+
+    // Drop into correct box
+    dropZones.forEach(zone => {
+        if (Phaser.Geom.Intersects.RectangleToRectangle(player.getBounds(), zone.getBounds())) {
+            if (carrying.includes(zone.getData('type'))) {
+                score++;
+                scoreText.setText('Score: ' + score);
+                carrying = [];
+            }
+        }
+    });
+}
+</script>
+
+</body>
+</html>
